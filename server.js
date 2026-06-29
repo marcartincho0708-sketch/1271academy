@@ -2,9 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 
+const path = require('path');
+const fs = require('fs');
+
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: '*' })); // En producción: ponés tu dominio
+app.use(cors({ origin: '*' }));
 
 /* =====================================================
    CONFIGURACIÓN — reemplazá con tus credenciales reales
@@ -142,6 +145,17 @@ app.post('/api/webhook', async (req, res) => {
    ===================================================== */
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', marca: '1271 Academia', timestamp: new Date().toISOString() });
+});
+
+// Sirve el HTML con la Public Key inyectada desde la variable de entorno
+app.get('/', (req, res) => {
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const publicKey = process.env.MP_PUBLIC_KEY || 'TU_PUBLIC_KEY_AQUI';
+  const injected = html.replace(
+    '<script>',
+    `<script>window.__MP_PUBLIC_KEY__ = ${JSON.stringify(publicKey)};</script>\n<script>`,
+  );
+  res.send(injected);
 });
 
 const PORT = process.env.PORT || 3001;
